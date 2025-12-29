@@ -97,7 +97,7 @@ def get_template_path():
     return "Main_data.pdf"
 
 
-def generate_blanks(user_data, output_filename="generated_blanks.pdf"):
+def generate_blanks(user_data,amount_blanks, output_filename="generated_blanks.pdf"):
 
     # Подготовка данных для генерации
     datas = {
@@ -134,13 +134,12 @@ def generate_blanks(user_data, output_filename="generated_blanks.pdf"):
 
         # Создаем новый документ для сближения файлов
         doc_step2 = pm.open()
-        dict_with_blanks = {"А": 1, "Б": 1, "В": 1, "ПП": 1, "ОТ": 1}
 
         margin_on_button = -410
         margin_off_button = 630
         cnt = 0
 
-        for grade, num in dict_with_blanks.items():
+        for grade, num in amount_blanks.items():
             if grade == "А":
                 page_doc = doc[0]
             elif grade == "Б":

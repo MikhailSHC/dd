@@ -39,6 +39,7 @@ async def send_start(message: Message):
             'field_to_change': "",
             'text': "",
             "status_corr_data": "",
+            "blanks_count": {"А": 0, "Б": 0, "В": 0, "ПП": 0, "ОТ": 0},
             'Выдано': '',
             'Место работы': '',
             'Должность': '',
@@ -55,6 +56,7 @@ async def send_start(message: Message):
             'field_to_change': "",
             'text': "",
             "status_corr_data": "",
+            "blanks_count": {"А":0,"Б":0,"В":0,"ПП":0,"ОТ":0},
             'Выдано': '',
             'Место работы': '',
             'Должность': '',
@@ -62,6 +64,44 @@ async def send_start(message: Message):
             'ПРТ_№': '',
             'Дата': ''
         }
+
+
+@router.message(lambda x: users[x.from_user.id]['current_stp'] == "numbers_blank")
+async def send_number(message: Message):
+    user_id = message.from_user.id
+    user_data = users.get(user_id)
+    mess = message.text.split(" ")
+    try:
+        int_format = list(map(int, mess))
+        users[user_id]['blanks_count']["А"] = int_format[0] if len(int_format) >= 1 else 0
+        users[user_id]['blanks_count']["Б"] = int_format[1] if len(int_format) >= 2 else 0
+        users[user_id]['blanks_count']["В"] = int_format[2] if len(int_format) >= 3 else 0
+        users[user_id]['blanks_count']["ПП"] = int_format[3] if len(int_format) >= 4 else 0
+        users[user_id]['blanks_count']["ОТ"] = int_format[4] if len(int_format) >= 5 else 0
+
+        await message.answer("✅ Отлично! Начинается процесс генерации...", reply_markup=ReplyKeyboardRemove())
+        filename = f"blanks_{user_id}_{int(time.time())}.pdf"
+        output_file = generate_blanks(user_data,users[user_id]['blanks_count'], filename)
+
+        if os.path.exists(output_file):
+            await message.answer("📄 Файл готов, отправляю...")
+
+            await message.bot.send_document(
+                chat_id=message.chat.id,
+                document=FSInputFile(output_file),
+                caption=f"✅ Бланки для {user_data['Выдано']}"
+            )
+
+            os.remove(output_file)
+
+            users[user_id]['current_stp'] = 'all'
+            await message.answer("Если хотите создать еще, нажмите кнопку 'Да' в меню", reply_markup=keyboards_2)
+        else:
+            await message.answer("❌ Файл не создался!")
+    except ValueError:
+        await message.answer(text="❌ Неправильная форма ввода. Попробуйте еще раз")
+
+
 
 
 @router.message(F.text == "✅ Верно")
@@ -72,25 +112,13 @@ async def corr_datas(message: Message):
         await message.answer('Пожалуйста, нажмите /start')
         return
 
-    await message.answer("✅ Отлично! Начинается процесс генерации...", reply_markup=ReplyKeyboardRemove())
-    filename = f"blanks_{user_id}_{int(time.time())}.pdf"
-    output_file = generate_blanks(user_data, filename)
-
-    if os.path.exists(output_file):
-        await message.answer("📄 Файл готов, отправляю...")
-
-        await message.bot.send_document(
-            chat_id=message.chat.id,
-            document=FSInputFile(output_file),
-            caption=f"✅ Бланки для {user_data['Выдано']}"
-        )
-
-        os.remove(output_file)
-
-        users[user_id]['current_stp'] = 'all'
-        await message.answer("Если хотите создать еще, нажмите кнопку 'Да' в меню", reply_markup=keyboards_2)
-    else:
-        await message.answer("❌ Файл не создался!")
+    users[message.from_user.id]['current_stp'] = "numbers_blank"
+    await message.answer(text="✅ Отлично! Остался последний шаг")
+    await asyncio.sleep(0.5)
+    await message.answer(text="Пожалуйста, введите количество бланков для генерации. Форма:\n\n"
+                              "📋 Количество бланков (А Б В ПП ОТ):\n"
+                              "💡 Пример: 1 2 1 0 3\n\n"
+                              "Введите: """)
 
 
 @router.message(F.text == "❌ Неверно")
@@ -348,6 +376,7 @@ async def send_wr_dt_yes(message: Message):
         'field_to_change': "",
         'text': "",
         "status_corr_data": "",
+        "blanks_count": {"А": 0, "Б": 0, "В": 0, "ПП": 0, "ОТ": 0},
         'Выдано': '',
         'Место работы': '',
         'Должность': '',
@@ -373,6 +402,7 @@ async def send_wr_dt_no(message: Message):
         'field_to_change': "",
         'text': "",
         "status_corr_data": "",
+        "blanks_count": {"А": 0, "Б": 0, "В": 0, "ПП": 0, "ОТ": 0},
         'Выдано': '',
         'Место работы': '',
         'Должность': '',

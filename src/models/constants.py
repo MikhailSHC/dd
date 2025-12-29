@@ -170,6 +170,10 @@ field_map = {
         "Дата": ("Дата", "Пожалуйста, введите Дату (26 янв 2025)")
     }
 
+
+
+
+
 button_1 = KeyboardButton(text="Самописное определение")
 button_2 = KeyboardButton(text="Определение через документ")
 button_3 = KeyboardButton(text='Да')
