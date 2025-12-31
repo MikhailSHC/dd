@@ -2,9 +2,10 @@ import os
 import traceback
 import pymupdf as pm
 from pathlib import Path
+from docx import Document
+
 
 from src.models.constants import style_css, correct_form_in_class, coordinates
-
 
 def fill_curr(num, val, kk, datas, doc):
     val[0][0], val[0][1], val[0][2], val[0][3] = val[0][0] + coordinates[num][kk][0], val[0][1] + coordinates[num][kk][

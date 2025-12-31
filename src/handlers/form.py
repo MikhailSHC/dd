@@ -10,7 +10,7 @@ from src.models.constants import users, MONTHS_RU, field_map, keyboards, keyboar
 from src.services.pdf_generator import generate_blanks
 from aiogram.types import ErrorEvent
 from aiogram.filters.exception import ExceptionTypeFilter
-
+from src.services.docx_generator import fill_docx_template
 router = Router()
 
 
@@ -39,7 +39,9 @@ async def send_start(message: Message):
             'field_to_change': "",
             'text': "",
             "status_corr_data": "",
-            "blanks_count": {"А": 0, "Б": 0, "В": 0, "ПП": 0, "ОТ": 0},
+            "blanks_count": {"А":0,"Б":0,"В":0,"ПП":0,"ОТ":0,
+                 "С1":0,"С2":0,"С3":0,"Т1":0,"Т2":0,"Т3":0},  # ← РУССКИЕ БУКВЫ
+
             'Выдано': '',
             'Место работы': '',
             'Должность': '',
@@ -56,7 +58,9 @@ async def send_start(message: Message):
             'field_to_change': "",
             'text': "",
             "status_corr_data": "",
-            "blanks_count": {"А":0,"Б":0,"В":0,"ПП":0,"ОТ":0},
+            "blanks_count": {"А":0,"Б":0,"В":0,"ПП":0,"ОТ":0,
+                 "С1":0,"С2":0,"С3":0,"Т1":0,"Т2":0,"Т3":0},  # ← РУССКИЕ БУКВЫ
+
             'Выдано': '',
             'Место работы': '',
             'Должность': '',
@@ -72,35 +76,78 @@ async def send_number(message: Message):
     user_data = users.get(user_id)
     mess = message.text.split(" ")
     try:
-        int_format = list(map(int, mess))
-        users[user_id]['blanks_count']["А"] = int_format[0] if len(int_format) >= 1 else 0
-        users[user_id]['blanks_count']["Б"] = int_format[1] if len(int_format) >= 2 else 0
-        users[user_id]['blanks_count']["В"] = int_format[2] if len(int_format) >= 3 else 0
-        users[user_id]['blanks_count']["ПП"] = int_format[3] if len(int_format) >= 4 else 0
-        users[user_id]['blanks_count']["ОТ"] = int_format[4] if len(int_format) >= 5 else 0
+        str_format = list(map(str, mess))
+        for group in str_format:
+            if group == "А":
+                users[user_id]['blanks_count']["А"] = 1
+            elif group == "Б":
+                users[user_id]['blanks_count']["Б"] = 1
+            elif group == "В":
+                users[user_id]['blanks_count']["В"] = 1
+            elif group == "ПП":
+                users[user_id]['blanks_count']["ПП"] = 1
+            elif group == "ОТ":
+                users[user_id]['blanks_count']["ОТ"] = 1
 
+            elif group == "С1":
+                users[user_id]['blanks_count']["С1"] = 1
+            elif group == "С2":
+                users[user_id]['blanks_count']["С2"] = 1
+            elif group == "С3":
+                users[user_id]['blanks_count']["С3"] = 1
+            elif group == "Т1":
+                users[user_id]['blanks_count']["Т1"] = 1
+            elif group == "Т2":
+                users[user_id]['blanks_count']["Т2"] = 1
+            elif group == "Т3":
+                users[user_id]['blanks_count']["Т3"] = 1
+
+        await asyncio.sleep(0.5)
         await message.answer("✅ Отлично! Начинается процесс генерации...", reply_markup=ReplyKeyboardRemove())
         filename = f"blanks_{user_id}_{int(time.time())}.pdf"
-        output_file = generate_blanks(user_data,users[user_id]['blanks_count'], filename)
+        output_file = generate_blanks(user_data, users[user_id]['blanks_count'], filename)
 
         if os.path.exists(output_file):
             await message.answer("📄 Файл готов, отправляю...")
 
+            # Отправляем PDF
             await message.bot.send_document(
                 chat_id=message.chat.id,
                 document=FSInputFile(output_file),
                 caption=f"✅ Бланки для {user_data['Выдано']}"
             )
 
+            # Генерация и отправка DOCX
+            try:
+                output_file_for_docx = fill_docx_template(user_data)
+                if output_file_for_docx and os.path.exists(output_file_for_docx):
+                    await message.bot.send_document(
+                        chat_id=message.chat.id,
+                        document=FSInputFile(output_file_for_docx),
+                        caption=f"📝 Документ для {user_data['Выдано']}"
+                    )
+                    # Удаляем временный DOCX файл
+                    os.remove(output_file_for_docx)
+                else:
+                    print("❌ DOCX файл не был создан")
+            except Exception as e:
+                print(f"⚠️ Ошибка при работе с DOCX: {e}")
+
+            # Удаляем PDF файл
             os.remove(output_file)
 
+            # Меняем состояние пользователя
             users[user_id]['current_stp'] = 'all'
             await message.answer("Если хотите создать еще, нажмите кнопку 'Да' в меню", reply_markup=keyboards_2)
+
         else:
-            await message.answer("❌ Файл не создался!")
+            await message.answer("❌ PDF файл не создался!")
+
     except ValueError:
         await message.answer(text="❌ Неправильная форма ввода. Попробуйте еще раз")
-
+    except Exception as e:
+        print(f"Общая ошибка в send_number: {e}")
+        await message.answer("❌ Произошла ошибка при генерации файлов")
 
 
 
@@ -376,7 +423,8 @@ async def send_wr_dt_yes(message: Message):
         'field_to_change': "",
         'text': "",
         "status_corr_data": "",
-        "blanks_count": {"А": 0, "Б": 0, "В": 0, "ПП": 0, "ОТ": 0},
+        "blanks_count": {"А":0,"Б":0,"В":0,"ПП":0,"ОТ":0,
+                             "C1":0,"C2":0,"C3":0,"T1":0,"T2":0,"T3":0},
         'Выдано': '',
         'Место работы': '',
         'Должность': '',
@@ -402,7 +450,8 @@ async def send_wr_dt_no(message: Message):
         'field_to_change': "",
         'text': "",
         "status_corr_data": "",
-        "blanks_count": {"А": 0, "Б": 0, "В": 0, "ПП": 0, "ОТ": 0},
+        "blanks_count": {"А":0,"Б":0,"В":0,"ПП":0,"ОТ":0,
+                             "C1":0,"C2":0,"C3":0,"T1":0,"T2":0,"T3":0},
         'Выдано': '',
         'Место работы': '',
         'Должность': '',

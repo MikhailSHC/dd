@@ -23,6 +23,17 @@ async def main():
     else:
         return
 
+    template_path_2 = "../test.docx"
+    if not os.path.exists(template_path_2):
+        from pathlib import Path
+        base_dir = Path(__file__).parent.parent
+        template_path_2 = base_dir / "test.docx"
+
+    if os.path.exists(template_path_2):
+        file_size_2 = os.path.getsize(template_path_2)
+    else:
+        return
+
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
     dp.include_router(router)
