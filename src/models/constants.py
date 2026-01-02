@@ -10,9 +10,9 @@ style_css = {
         "Должность": {'size': '12px', "weight": "bold", 'align': "center", "family": "Georgia", "padding": "0",
                       'margin': "0", "high": "1"},
         "УДОСТОВЕРЕНИЕ №": {'size': '12px', "weight": "bold", 'align': "left", "family": "Times New Roman",
-                           "padding": "-0.5", 'margin': "0", "high": "1"},
+                            "padding": "-0.5", 'margin': "0", "high": "1"},
         "Протокол заседания комиссии №": {'size': '10px', "weight": "normal", 'align': "left",
-                                         "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
+                                          "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
         "Дата": {'size': '10px', "weight": "normal", 'align': "left", "family": "Times New Roman", "padding": "0",
                  'margin': "0", "high": "1"},
     },
@@ -24,9 +24,9 @@ style_css = {
         "Должность": {'size': '12px', "weight": "bold", 'align': "center", "family": "Georgia", "padding": "0",
                       'margin': "0", "high": "1"},
         "УДОСТОВЕРЕНИЕ №": {'size': '12px', "weight": "bold", 'align': "left", "family": "Times New Roman",
-                           "padding": "-0.5", 'margin': "0", "high": "1"},
+                            "padding": "-0.5", 'margin': "0", "high": "1"},
         "Протокол заседания комиссии №": {'size': '10px', "weight": "normal", 'align': "left",
-                                         "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
+                                          "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
         "Дата": {'size': '10px', "weight": "normal", 'align': "left", "family": "Times New Roman", "padding": "0",
                  'margin': "0", "high": "1"},
     },
@@ -38,9 +38,9 @@ style_css = {
         "Должность": {'size': '12px', "weight": "bold", 'align': "center", "family": "Georgia", "padding": "0",
                       'margin': "0", "high": "1"},
         "УДОСТОВЕРЕНИЕ №": {'size': '12px', "weight": "bold", 'align': "left", "family": "Times New Roman",
-                           "padding": "-0.5", 'margin': "0", "high": "1"},
+                            "padding": "-0.5", 'margin': "0", "high": "1"},
         "Протокол заседания комиссии №": {'size': '10px', "weight": "normal", 'align': "left",
-                                         "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
+                                          "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
         "Дата": {'size': '10px', "weight": "normal", 'align': "left", "family": "Times New Roman", "padding": "0",
                  'margin': "0", "high": "1"}
     },
@@ -52,7 +52,7 @@ style_css = {
         "Должность": {'size': "12px", "weight": "bold", 'align': "center", "family": "Georgia", "padding": "0",
                       'margin': "0", "high": "0.9"},
         "УДОСТОВЕРЕНИЕ №": {'size': '12px', "weight": "bold", 'align': "left", "family": "Times New Roman",
-                           "padding": "-0.5", 'margin': "0", "high": "0.9"},
+                            "padding": "-0.5", 'margin': "0", "high": "0.9"},
         "Протокол №": {'size': '10px', "weight": "bold", 'align': "left", "family": "Times New Roman", "padding": "0",
                        'margin': "0", "high": "0.9"},
         "Дата": {'size': '10px', "weight": "bold", 'align': "left", "family": "Times New Roman", "padding": "0",
@@ -66,9 +66,9 @@ style_css = {
         "Должность": {'size': '12px', "weight": "bold", 'align': "center", "family": "Georgia", "padding": "0",
                       'margin': "0", "high": "1"},
         "УДОСТОВЕРЕНИЕ №": {'size': '12px', "weight": "bold", 'align': "left", "family": "Times New Roman",
-                           "padding": "-0.5", 'margin': "0", "high": "1"},
+                            "padding": "-0.5", 'margin': "0", "high": "1"},
         "Протокол заседания комиссии №": {'size': '10px', "weight": "bold", "font-style": "italic", 'align': "left",
-                                         "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
+                                          "family": "Times New Roman", "padding": "0", 'margin': "0", "high": "1"},
         "Дата": {'size': '10px', "weight": "bold", "font-style": "italic", 'align': "left", "family": "Times New Roman",
                  "padding": "0", 'margin': "0", "high": "1"},
     }
@@ -160,19 +160,16 @@ MONTHS_RU = {
     "12": "декабря",
 }
 
-
 field_map = {
-        "ФИО": ("Выдано", "Пожалуйста, отправьте ФИО (Александр Александров)"),
-        "Место работы": ("Место работы", "Пожалуйста, введите Место работы (ООО Конус)"),
-        "Должность": ("Должность", "Пожалуйста, введите Должность (электросварщик)"),
-        "№ Удостоверения": ("Удост_№", "Пожалуйста, введите Номер Удостоверения (25665)"),
-        "№ Протокола": ("ПРТ_№", "Пожалуйста, введите Номер Протокола"),
-        "Дата": ("Дата", "Пожалуйста, введите Дату (26 янв 2025)")
-    }
-
-
-
-
+    # Пример исправлен на 3 слова, чтобы не провоцировать ошибку валидации ФИО
+    "ФИО": ("Выдано", "Пожалуйста, отправьте ФИО (Иванов Иван Иванович)"),
+    "Место работы": ("Место работы", "Пожалуйста, введите Место работы (ООО Конус)"),
+    "Должность": ("Должность", "Пожалуйста, введите Должность (электросварщик)"),
+    "№ Удостоверения": ("Удост_№", "Пожалуйста, введите Номер Удостоверения (25665)"),
+    "№ Протокола": ("ПРТ_№", "Пожалуйста, введите Номер Протокола"),
+    # Привели подсказку к формату, который реально обрабатывает form.py: "26 09 25"
+    "Дата": ("Дата", "Пожалуйста, введите Дату (например: 26 09 25)")
+}
 
 button_1 = KeyboardButton(text="Самописное определение")
 button_2 = KeyboardButton(text="Определение через документ")
@@ -181,7 +178,6 @@ button_4 = KeyboardButton(text='Нет')
 button_5 = KeyboardButton(text='⬅️ Назад')
 button_6 = KeyboardButton(text='❌ Неверно')
 button_7 = KeyboardButton(text="✅ Верно")
-
 
 button_8 = KeyboardButton(text="ФИО")
 button_9 = KeyboardButton(text="Место работы")
@@ -193,8 +189,10 @@ button_13 = KeyboardButton(text="Дата")
 keyboards = ReplyKeyboardMarkup(keyboard=[[button_1, button_2]], resize_keyboard=True)
 keyboards_2 = ReplyKeyboardMarkup(keyboard=[[button_3, button_4]], resize_keyboard=True)
 keyboards_3 = ReplyKeyboardMarkup(keyboard=[[button_5]], resize_keyboard=True)
-keyboards_4 = ReplyKeyboardMarkup(keyboard=[[button_7],[button_6]], resize_keyboard=True)
-keyboards_5 = ReplyKeyboardMarkup(keyboard=[[button_8],[button_9],[button_10],[button_11],[button_12],[button_13],], resize_keyboard=True)
+keyboards_4 = ReplyKeyboardMarkup(keyboard=[[button_7], [button_6]], resize_keyboard=True)
+keyboards_5 = ReplyKeyboardMarkup(keyboard=[[button_8], [button_9], [button_10], [button_11], [button_12], [button_13]],
+                                  resize_keyboard=True)
+
 # Хранение данных пользователей
 users = {}
 total_users = {}

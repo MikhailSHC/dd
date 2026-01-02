@@ -4,12 +4,16 @@ import pymupdf as pm
 from pathlib import Path
 from docx import Document
 
-
 from src.models.constants import style_css, correct_form_in_class, coordinates
 
+
 def fill_curr(num, val, kk, datas, doc):
-    val[0][0], val[0][1], val[0][2], val[0][3] = val[0][0] + coordinates[num][kk][0], val[0][1] + coordinates[num][kk][
-        1], val[0][2] + coordinates[num][kk][2], val[0][3] + coordinates[num][kk][3]
+    val[0][0], val[0][1], val[0][2], val[0][3] = (
+        val[0][0] + coordinates[num][kk][0],
+        val[0][1] + coordinates[num][kk][1],
+        val[0][2] + coordinates[num][kk][2],
+        val[0][3] + coordinates[num][kk][3],
+    )
 
     if num == 4:
         doc[num].add_redact_annot(val[0], fill=(0.7019, 0.8980, 0.6314))
@@ -18,13 +22,19 @@ def fill_curr(num, val, kk, datas, doc):
 
     doc[num].apply_redactions()
 
-    # Генерируем CSS ТОЧНО как в оригинале - одной строкой!
-    css_text = f".abx {{font-size: {style_css[num][kk]['size']} !important; font-weight: {style_css[num][kk]['weight']}; text-align: {style_css[num][kk]['align']}; font-family: {style_css[num][kk]['family']}; padding: {style_css[num][kk]['padding']}; margin: {style_css[num][kk]['margin']};}}"
+    css_text = (
+        f".abx {{font-size: {style_css[num][kk]['size']} !important; "
+        f"font-weight: {style_css[num][kk]['weight']}; "
+        f"text-align: {style_css[num][kk]['align']}; "
+        f"font-family: {style_css[num][kk]['family']}; "
+        f"padding: {style_css[num][kk]['padding']}; "
+        f"margin: {style_css[num][kk]['margin']};}}"
+    )
 
     regen = doc[num].insert_htmlbox(
         val[0],
         f'{correct_form_in_class[num][kk]}<i>{datas[kk]}</i></div>',
-        css=css_text  # Используем ТОЧНО такую же строку
+        css=css_text
     )
     return regen
 
@@ -34,7 +44,6 @@ def change_coordinates(dict_with_coor, datas, doc):
         for sub_key, val in value.items():
             fill_curr(key, val, sub_key, datas, doc)
         datas["УДОСТОВЕРЕНИЕ №"] = str(int(datas["УДОСТОВЕРЕНИЕ №"]) + 1)
-
 
 
 def find_coor(args_in_dict, doc):
@@ -84,23 +93,18 @@ def change_dt(dict_with_data, doc):
 
 
 def get_template_path():
-    # 1. Текущая рабочая директория
     if os.path.exists("Main_data.pdf"):
         return "Main_data.pdf"
 
-    # 2. Рядом с исполняемым файлом
-    base_dir = Path(__file__).parent.parent.parent  # project/
+    base_dir = Path(__file__).parent.parent.parent
     template_path = base_dir / "Main_data.pdf"
     if os.path.exists(template_path):
         return str(template_path)
 
-    # 3. В текущей директории пользователя
     return "Main_data.pdf"
 
 
-def generate_blanks(user_data,amount_blanks, output_filename="generated_blanks.pdf"):
-
-    # Подготовка данных для генерации
+def generate_blanks(user_data, amount_blanks, output_filename="generated_blanks.pdf"):
     datas = {
         'Выдано': user_data['Выдано'],
         'Место работы': user_data['Место работы'],
@@ -112,28 +116,21 @@ def generate_blanks(user_data,amount_blanks, output_filename="generated_blanks.p
     }
 
     try:
-        # Получаем путь к шаблону
         template_path = get_template_path()
 
-        # Проверяем существование файла шаблона
         if not os.path.exists(template_path):
             print(f"Файл шаблона '{template_path}' не найден!")
             print(f"Текущая директория: {os.getcwd()}")
             print(f"Искали в: {template_path}")
-            raise FileNotFoundError(f"Файл шаблона 'Main_data.pdf' не найден!")
+            raise FileNotFoundError("Файл шаблона 'Main_data.pdf' не найден!")
 
-        # Открываем основной шаблон
         doc = pm.open(template_path)
 
         dict_change = {}
-
-        # Преобразуем шаблон под конкретные данные
         dict_with_datas = change_dt(dict_change, doc)
         find_coor(dict_with_datas, doc)
         change_coordinates(dict_with_datas, datas, doc)
 
-
-        # Создаем новый документ для сближения файлов
         doc_step2 = pm.open()
 
         margin_on_button = -410
@@ -149,12 +146,12 @@ def generate_blanks(user_data,amount_blanks, output_filename="generated_blanks.p
                 page_doc = doc[2]
             elif grade == "ПП":
                 page_doc = doc[3]
-            elif grade == "ОТ":
+            elif grade == "СИЗ":   # ОТ -> СИЗ
                 page_doc = doc[4]
             else:
                 continue
 
-            for exmp in range(num):
+            for _ in range(num):
                 if cnt % 4 == 0:
                     margin_on_button = -410
                     margin_off_button = 630
@@ -192,7 +189,12 @@ def generate_blanks(user_data,amount_blanks, output_filename="generated_blanks.p
                 margin_on_button += 295
                 margin_off_button += 125
 
-        # Сохраняем результат
+        # ---- защита от “пустого PDF” ----
+        if doc_step2.page_count == 0:
+            doc.close()
+            doc_step2.close()
+            raise ValueError("Не выбрано ни одного PDF-бланка (А/Б/В/ПП/СИЗ).")
+
         doc_step2.save(
             output_filename,
             garbage=4,
@@ -202,7 +204,6 @@ def generate_blanks(user_data,amount_blanks, output_filename="generated_blanks.p
         )
         doc.close()
         doc_step2.close()
-
 
         return output_filename
 
