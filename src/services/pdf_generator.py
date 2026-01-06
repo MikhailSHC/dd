@@ -8,17 +8,18 @@ from src.models.constants import style_css, correct_form_in_class, coordinates
 
 
 def fill_curr(num, val, kk, datas, doc):
-    val[0][0], val[0][1], val[0][2], val[0][3] = (
-        val[0][0] + coordinates[num][kk][0],
-        val[0][1] + coordinates[num][kk][1],
-        val[0][2] + coordinates[num][kk][2],
-        val[0][3] + coordinates[num][kk][3],
+    base = val[0]
+    rect = pm.Rect(
+        base[0] + coordinates[num][kk][0],
+        base[1] + coordinates[num][kk][1],
+        base[2] + coordinates[num][kk][2],
+        base[3] + coordinates[num][kk][3],
     )
 
     if num == 4:
-        doc[num].add_redact_annot(val[0], fill=(0.7019, 0.8980, 0.6314))
+        doc[num].add_redact_annot(rect, fill=(0.7019, 0.8980, 0.6314))
     else:
-        doc[num].add_redact_annot(val[0], fill=(1, 1, 1))
+        doc[num].add_redact_annot(rect, fill=(1, 1, 1))
 
     doc[num].apply_redactions()
 
@@ -31,19 +32,18 @@ def fill_curr(num, val, kk, datas, doc):
         f"margin: {style_css[num][kk]['margin']};}}"
     )
 
-    regen = doc[num].insert_htmlbox(
-        val[0],
+    return doc[num].insert_htmlbox(
+        rect,
         f'{correct_form_in_class[num][kk]}<i>{datas[kk]}</i></div>',
         css=css_text
     )
-    return regen
 
 
 def change_coordinates(dict_with_coor, datas, doc):
+    # Заполняем статичные поля ОДИН раз на каждой странице (как раньше)
     for key, value in dict_with_coor.items():
         for sub_key, val in value.items():
             fill_curr(key, val, sub_key, datas, doc)
-        datas["УДОСТОВЕРЕНИЕ №"] = str(int(datas["УДОСТОВЕРЕНИЕ №"]) + 1)
 
 
 def find_coor(args_in_dict, doc):
@@ -64,24 +64,29 @@ def change_dt(dict_with_data, doc):
                 val_datas = val_datas.split()
                 coor = ' '.join(val_datas[1:])
                 dict_with_data[order].setdefault("Выдано", coor)
+
             elif 'УДОСТОВЕРЕНИЕ №' in val_datas:
                 val_datas = val_datas.split()
                 coor = ' '.join(val_datas[2:])
                 dict_with_data[order].setdefault("УДОСТОВЕРЕНИЕ №", coor)
+
             elif 'Место работы:' in val_datas:
                 val_datas = val_datas.split()
                 coor = ' '.join(val_datas[2:])
                 dict_with_data[order].setdefault("Место работы", coor)
+
             elif 'Должность' in val_datas:
                 val_datas = val_datas.split()
                 coor = ' '.join(val_datas[1:])
                 dict_with_data[order].setdefault("Должность", coor)
+
             elif "Протокол заседания комиссии №" in val_datas:
                 val_datas = val_datas.split()
                 coor = val_datas[4]
                 dict_with_data[order].setdefault("Протокол заседания комиссии №", coor)
                 coor = " ".join(val_datas[6:])
                 dict_with_data[order].setdefault("Дата", coor)
+
             elif "Протокол №" in val_datas:
                 val_datas = val_datas.split()
                 coor = val_datas[2]
@@ -102,6 +107,18 @@ def get_template_path():
         return str(template_path)
 
     return "Main_data.pdf"
+
+
+def _draw_udost_on_output(new_page_step2, rect_on_output, number_str):
+    # простой вывод номера поверх картинки
+    new_page_step2.insert_textbox(
+        rect_on_output,
+        str(number_str),
+        fontname="Times-Roman",
+        fontsize=12,
+        color=(0, 0, 0),
+        align=0  # left
+    )
 
 
 def generate_blanks(user_data, amount_blanks, output_filename="generated_blanks.pdf"):
@@ -129,6 +146,8 @@ def generate_blanks(user_data, amount_blanks, output_filename="generated_blanks.
         dict_change = {}
         dict_with_datas = change_dt(dict_change, doc)
         find_coor(dict_with_datas, doc)
+
+        # 1) статичные поля один раз (как раньше)
         change_coordinates(dict_with_datas, datas, doc)
 
         doc_step2 = pm.open()
@@ -139,14 +158,19 @@ def generate_blanks(user_data, amount_blanks, output_filename="generated_blanks.
 
         for grade, num in amount_blanks.items():
             if grade == "А":
+                page_index = 0
                 page_doc = doc[0]
             elif grade == "Б":
+                page_index = 1
                 page_doc = doc[1]
             elif grade == "В":
+                page_index = 2
                 page_doc = doc[2]
             elif grade == "ПП":
+                page_index = 3
                 page_doc = doc[3]
-            elif grade == "СИЗ":   # ОТ -> СИЗ
+            elif grade == "СИЗ":
+                page_index = 4
                 page_doc = doc[4]
             else:
                 continue
@@ -186,10 +210,32 @@ def generate_blanks(user_data, amount_blanks, output_filename="generated_blanks.
                 matrix = pm.Matrix(3.0, 3.0)
                 pix = page_doc.get_pixmap(clip=correct_form, matrix=matrix)
                 new_page_step2.insert_image(top_position_on_page, pixmap=pix)
+
+                # 2) рисуем номер ПОВЕРХ картинки (не трогаем doc redactions)
+                base = dict_with_datas[page_index]["УДОСТОВЕРЕНИЕ №"][0]
+                ud_rect_on_source = pm.Rect(
+                    base[0] + coordinates[page_index]["УДОСТОВЕРЕНИЕ №"][0],
+                    base[1] + coordinates[page_index]["УДОСТОВЕРЕНИЕ №"][1],
+                    base[2] + coordinates[page_index]["УДОСТОВЕРЕНИЕ №"][2],
+                    base[3] + coordinates[page_index]["УДОСТОВЕРЕНИЕ №"][3],
+                )
+
+                # переводим координаты из source (clip + matrix) в output
+                scale = 3.0
+                ud_rect_on_output = pm.Rect(
+                    top_position_on_page.x0 + (ud_rect_on_source.x0 - correct_form.x0) / scale,
+                    top_position_on_page.y0 + (ud_rect_on_source.y0 - correct_form.y0) / scale,
+                    top_position_on_page.x0 + (ud_rect_on_source.x1 - correct_form.x0) / scale,
+                    top_position_on_page.y0 + (ud_rect_on_source.y1 - correct_form.y0) / scale,
+                )
+
+                _draw_udost_on_output(new_page_step2, ud_rect_on_output, datas["УДОСТОВЕРЕНИЕ №"])
+
                 margin_on_button += 295
                 margin_off_button += 125
 
-        # ---- защита от “пустого PDF” ----
+                datas["УДОСТОВЕРЕНИЕ №"] = str(int(datas["УДОСТОВЕРЕНИЕ №"]) + 1)
+
         if doc_step2.page_count == 0:
             doc.close()
             doc_step2.close()
@@ -204,6 +250,9 @@ def generate_blanks(user_data, amount_blanks, output_filename="generated_blanks.
         )
         doc.close()
         doc_step2.close()
+
+        # номер для DOCX
+        user_data["Удост_№"] = datas["УДОСТОВЕРЕНИЕ №"]
 
         return output_filename
 

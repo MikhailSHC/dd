@@ -7,7 +7,6 @@ from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 from aiogram.filters import CommandStart
 
 from src.models.constants import users, MONTHS_RU, field_map, keyboards, keyboards_2, keyboards_3, keyboards_4, keyboards_5
-from src.services.pdf_generator import generate_blanks
 from aiogram.types import ErrorEvent
 from aiogram.filters.exception import ExceptionTypeFilter
 from src.services.docx_generator import fill_docx_template
@@ -121,59 +120,40 @@ async def send_number(message: Message):
         for raw in raw_tokens:
             token = _normalize_blank_token(raw)
             if token in allowed:
-                users[user_id]['blanks_count'][token] = 1
+                users[user_id]["blanks_count"][token] = 1
 
         await asyncio.sleep(0.5)
-        await message.answer("✅ Отлично! Начинается процесс генерации...", reply_markup=ReplyKeyboardRemove())
+        await message.answer(
+            "✅ Отлично! Начинается генерация DOCX...",
+            reply_markup=ReplyKeyboardRemove()
+        )
 
-        # ---- FIX ошибки (2): если выбраны только С/Т — не пытаемся делать PDF ----
-        pdf_keys = {"А", "Б", "В", "ПП", "СИЗ"}
-        has_pdf = any(users[user_id]['blanks_count'].get(k, 0) for k in pdf_keys)
+        # Генерируем один DOCX со всеми выбранными бланками
+        output_file_for_docx = fill_docx_template(user_data)
 
-        output_file = None
-        if has_pdf:
-            filename = f"blanks_{user_id}_{int(time.time())}.pdf"
-            output_file = generate_blanks(user_data, users[user_id]['blanks_count'], filename)
-
-            if output_file and os.path.exists(output_file):
-                await message.answer("📄 PDF готов, отправляю...")
-                await message.bot.send_document(
-                    chat_id=message.chat.id,
-                    document=FSInputFile(output_file),
-                    caption=f"✅ Бланки для {user_data['Выдано']}"
-                )
-            else:
-                await message.answer("❌ PDF файл не создался!")
-
+        if output_file_for_docx and os.path.exists(output_file_for_docx):
+            await message.bot.send_document(
+                chat_id=message.chat.id,
+                document=FSInputFile(output_file_for_docx),
+                caption=f"📝 Бланки для {user_data.get('Выдано', '')}"
+            )
+            os.remove(output_file_for_docx)
         else:
-            await message.answer("ℹ️ Вы выбрали только С/Т-бланки — PDF не требуется, формирую только DOCX...")
+            await message.answer("❌ DOCX файл не был создан!")
+            users[user_id]["current_stp"] = "numbers_blank"
+            return
 
-        # DOCX отправляем всегда (как и было у тебя)
-        try:
-            output_file_for_docx = fill_docx_template(user_data)
-            if output_file_for_docx and os.path.exists(output_file_for_docx):
-                await message.bot.send_document(
-                    chat_id=message.chat.id,
-                    document=FSInputFile(output_file_for_docx),
-                    caption=f"📝 Документ для {user_data['Выдано']}"
-                )
-                os.remove(output_file_for_docx)
-            else:
-                print("❌ DOCX файл не был создан")
-        except Exception as e:
-            print(f"⚠️ Ошибка при работе с DOCX: {e}")
+        # ВАЖНО: fill_docx_template обновляет user_data["Удост_№"] (конечный номер)
+        users[user_id]["Удост_№"] = user_data.get("Удост_№", users[user_id].get("Удост_№", ""))
 
-        if output_file and os.path.exists(output_file):
-            os.remove(output_file)
-
-        users[user_id]['current_stp'] = 'all'
+        users[user_id]["current_stp"] = "all"
         await message.answer("Если хотите создать еще, нажмите кнопку 'Да' в меню", reply_markup=keyboards_2)
 
     except ValueError:
         await message.answer(text="❌ Неправильная форма ввода. Попробуйте еще раз")
     except Exception as e:
         print(f"Общая ошибка в send_number: {e}")
-        await message.answer("❌ Произошла ошибка при генерации файлов")
+        await message.answer("❌ Произошла ошибка при генерации DOCX")
 
 
 @router.message(F.text == "✅ Верно")
