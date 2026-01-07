@@ -5,6 +5,7 @@ import traceback
 import copy
 import pathlib
 import re
+from datetime import datetime, timedelta
 
 from docx import Document
 from docx.shared import Mm, Pt
@@ -13,7 +14,6 @@ from docx.oxml.ns import qn
 
 
 def replace_in_runs(paragraph, datas):
-    """ТВОЯ текущая замена (как было) — оставляем для всех бланков кроме СИЗ."""
     if not datas or not isinstance(datas, dict):
         return
     if paragraph is None or not getattr(paragraph, "runs", None):
@@ -60,10 +60,7 @@ def replace_in_runs(paragraph, datas):
 
 
 def replace_in_runs_force(paragraph, datas):
-    """
-    Агрессивная замена: всегда работает даже если плейсхолдер разбит на runs.
-    Применять ТОЛЬКО для СИЗ.
-    """
+
     if not datas or not isinstance(datas, dict):
         return
     if paragraph is None or not getattr(paragraph, "runs", None):
@@ -94,7 +91,6 @@ def replace_in_runs_force(paragraph, datas):
 
 
 def _table_has_text(table, needle: str) -> bool:
-    """Проверяет, встречается ли needle в тексте ячеек таблицы (быстро и надёжно)."""
     try:
         for row in table.rows:
             for cell in row.cells:
@@ -145,7 +141,25 @@ def _fmt_long_ru(date_tuple) -> str:
     if not date_tuple:
         return ""
     d, mo, y = date_tuple
-    return f"{d} {_MONTHS_RU.get(mo, '')} {y}"
+    return f"«{d:02d}» {_MONTHS_RU.get(mo, '')} {y}"
+
+
+def _calculate_end_date(date_tuple, years_offset: int = 3) -> str:
+
+    if not date_tuple:
+        return ""
+
+    d, mo, y = date_tuple
+
+    try:
+        start_date = datetime(y, mo, d)
+        end_date = start_date.replace(year=start_date.year + years_offset)
+
+        # Форматируем: DD.MM.YYYYг.
+        result = f"{end_date.day:02d}.{end_date.month:02d}.{end_date.year}г."
+        return result.replace(".", "\u2024")
+    except Exception:
+        return ""
 
 
 def _fmt_short_g(date_tuple) -> str:
@@ -154,6 +168,20 @@ def _fmt_short_g(date_tuple) -> str:
     d, mo, y = date_tuple
     s = f"{d:02d}.{mo:02d}.{y}г."
     return s.replace(".", "\u2024")
+
+
+def _get_years_offset_for_st(table_index: int) -> int:
+    """
+    Определяет количество лет валидности для бланков С и Т.
+
+    С1, Т1 (table_index 0, 3) → 3 года
+    С2, С3, Т2, Т3 (table_index 1, 2, 4, 5) → 5 лет
+    """
+    if table_index in (0,1,3,4):  # С1, Т1
+        return 3
+    if table_index in (2, 5):  # С2, С3, Т2, Т3
+        return 5
+    return 3  # по умолчанию
 
 
 def _set_cell_width_mm(cell, mm: float):
@@ -343,12 +371,12 @@ def _build_plan(blanks_count: dict):
     plan += [("main", 3)] * _get_count(blanks_count, "ПП", "PP")
     plan += [("main", 4)] * _get_count(blanks_count, "СИЗ", "SIZ", "ОТ", "OT")
 
-    plan += [("st", 0)] * _get_count(blanks_count, "С1", "C1")
-    plan += [("st", 1)] * _get_count(blanks_count, "С2", "C2")
-    plan += [("st", 2)] * _get_count(blanks_count, "С3", "C3")
-    plan += [("st", 3)] * _get_count(blanks_count, "Т1", "T1")
-    plan += [("st", 4)] * _get_count(blanks_count, "Т2", "T2")
-    plan += [("st", 5)] * _get_count(blanks_count, "Т3", "T3")
+    plan += [("st", 0)] * _get_count(blanks_count, "З1", "З1")
+    plan += [("st", 1)] * _get_count(blanks_count, "З2", "З2")
+    plan += [("st", 2)] * _get_count(blanks_count, "З3", "З3")
+    plan += [("st", 3)] * _get_count(blanks_count, "В1", "В1")
+    plan += [("st", 4)] * _get_count(blanks_count, "В2", "В2")
+    plan += [("st", 5)] * _get_count(blanks_count, "В3", "В3")
 
     return plan
 
@@ -378,6 +406,8 @@ def fill_docx_template(dt):
         name_parts = [p for p in full_name.split() if p]
 
         user_date_tuple = _parse_user_date(dt.get("Дата", "") or "")
+        data_start = _fmt_short_g(user_date_tuple)
+        data_end = _calculate_end_date(user_date_tuple)
 
         try:
             blank_start = int(dt.get("Удост_№", 0) or 0)
@@ -385,17 +415,17 @@ def fill_docx_template(dt):
             blank_start = 0
 
         placeholders_base = {
-            "{surname}": name_parts[0] if len(name_parts) > 0 else "",
-            "{name}": name_parts[1] if len(name_parts) > 1 else "",
-            "{father_name}": name_parts[2] if len(name_parts) > 2 else "",
+            "{surn}": name_parts[0] if len(name_parts) > 0 else "",
+            "{na}": name_parts[1] if len(name_parts) > 1 else "",
+            "{father}": name_parts[2] if len(name_parts) > 2 else "",
             "{work_feat}": dt.get("Должность", "") or "",
             "{organization_name}": dt.get("Место работы", "") or "",
             "{organization _name}": dt.get("Место работы", "") or "",
             "{protocol_№}": str(dt.get("ПРТ_№", "") or ""),
             "{protocol}": str(dt.get("ПРТ_№", "") or ""),
             "{data}": _fmt_long_ru(user_date_tuple),
-            "{data_start}": "12.10.2025",
-            "{data_end}": "12.10.2028",
+            "{data_start}": data_start,
+            "{data_end}": data_end,
         }
 
         blanks_count = dt.get("blanks_count", {}) or {}
@@ -443,7 +473,6 @@ def fill_docx_template(dt):
                     _widen_osnovanie_left_cell(inserted_table, add_mm=3.0)
 
         for i, table in enumerate(out_doc.tables):
-            # plan[i] оставляем как было (для логики дат/групп), но СИЗ определяем по тексту таблицы
             src, src_table_index = plan[i]
 
             ph = dict(placeholders_base)
@@ -451,20 +480,26 @@ def fill_docx_template(dt):
 
             if src == "st":
                 ph["{rang_group}"] = _group_for_st_table(src_table_index)
-                if src_table_index in (0, 1, 2):
-                    ph["{data}"] = _fmt_short_g(user_date_tuple)
 
-            # === ВОТ КЛЮЧЕВАЯ ПРАВКА ===
+                # Определяем количество лет валидности в зависимости от типа бланка
+                years_offset = _get_years_offset_for_st(src_table_index)
+
+                # Форматируем дату в коротком формате (DD.MM.YYYYг.)
+                ph["{data}"] = _fmt_short_g(user_date_tuple)
+
+                # Вычисляем data_start и data_end с учётом типа бланка
+                ph["{data_start}"] = _fmt_short_g(user_date_tuple)
+                ph["{data_end}"] = _calculate_end_date(user_date_tuple, years_offset=years_offset)
+
             is_siz = _table_has_text(table, "{protocol_№}")
-            # ===========================
 
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
                         if is_siz:
-                            replace_in_runs_force(paragraph, ph)  # только СИЗ
+                            replace_in_runs_force(paragraph, ph)
                         else:
-                            replace_in_runs(paragraph, ph)        # все остальные
+                            replace_in_runs(paragraph, ph)
 
         _compact_paragraphs(out_doc)
 

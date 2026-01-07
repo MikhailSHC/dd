@@ -1,6 +1,5 @@
 import asyncio
 import os
-import time
 
 from aiogram import Router, F
 from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
@@ -37,7 +36,7 @@ def _reset_user_state(user_id: int, wr_dt: bool = False, aut_dep: bool = False):
         'text': "",
         "status_corr_data": "",
         "blanks_count": {"А": 0, "Б": 0, "В": 0, "ПП": 0, "СИЗ": 0,
-                        "С1": 0, "С2": 0, "С3": 0, "Т1": 0, "Т2": 0, "Т3": 0},
+                        "З1": 0, "З2": 0, "З3": 0, "В1": 0, "В2": 0, "В3": 0},
         'Выдано': '',
         'Место работы': '',
         'Должность': '',
@@ -85,13 +84,13 @@ def _normalize_blank_token(raw: str) -> str:
     # C1..C3 / T1..T3 латиницей
     if len(s_up) == 2 and s_up[1].isdigit():
         letter, digit = s_up[0], s_up[1]
-        if letter == "C" and digit in ("1", "2", "3"):
-            return f"С{digit}"
-        if letter == "T" and digit in ("1", "2", "3"):
-            return f"Т{digit}"
+        if letter == "З" and digit in ("1", "2", "3"):
+            return f"З{digit}"
+        if letter == "В" and digit in ("1", "2", "3"):
+            return f"В{digit}"
 
     # Русские токены (в любом регистре)
-    if s_up in {"А", "Б", "В", "ПП", "СИЗ", "С1", "С2", "С3", "Т1", "Т2", "Т3"}:
+    if s_up in {"А", "Б", "В", "ПП", "СИЗ", "З1", "З2", "З3", "В1", "В2", "В3"}:
         return s_up
 
     return ""
@@ -112,7 +111,7 @@ async def send_number(message: Message):
     raw_tokens = [t for t in (message.text or "").split() if t.strip()]
 
     try:
-        allowed = {"А", "Б", "В", "ПП", "СИЗ", "С1", "С2", "С3", "Т1", "Т2", "Т3"}
+        allowed = {"А", "Б", "В", "ПП", "СИЗ", "З1", "З2", "З3", "В1", "В2", "В3"}
 
         # Сбрасываем прошлый выбор бланков, чтобы новый ввод не “добавлялся” к старому
         users[user_id]["blanks_count"] = {k: 0 for k in users[user_id]["blanks_count"].keys()}
@@ -169,10 +168,10 @@ async def corr_datas(message: Message):
     await asyncio.sleep(0.5)
     await message.answer(
         text="Пожалуйста, введите типы бланков для генерации. Формат:\n\n"
-             "📋 Типы бланков: А Б В ПП СИЗ С1 С2 С3 Т1 Т2 Т3\n"
-             "💡 Пример: А С1 Т2\n\n"
-             "Введите: "
-    )
+             "📋 Типы бланков: А Б В ПП СИЗ З1 З2 З3 В1 В2 В3\n"
+             "💡 Пример: А П1 В2\n\n"
+             "Введите: ",
+        reply_markup = ReplyKeyboardRemove())
 
 
 @router.message(F.text == "❌ Неверно")
@@ -434,7 +433,7 @@ async def send_wr_dt6(message: Message):
         )
         return
 
-    users[user_id]['Дата'] = f'«{day}» {MONTHS_RU[month_num]} 20{year_suffix}г'
+    users[user_id]['Дата'] = f'«{int(day):02d}» {MONTHS_RU[month_num]} 20{year_suffix}г'
     await message.answer(text="❗ Пожалуйста, проверьте правильность полученных данных",
                          reply_markup=keyboards_4)
     await asyncio.sleep(1)

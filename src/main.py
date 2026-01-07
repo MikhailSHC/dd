@@ -10,12 +10,12 @@ from src.handlers.form import router
 
 
 def _find_file(filename: str) -> str | None:
-    base_dir = Path(__file__).parent.parent  # корень проекта
+    base_dir = Path(__file__).parent.parent
     candidates = [
-        Path(filename),                 # cwd
-        Path("../") / filename,         # рядом при запуске из src/
-        base_dir / filename,            # корень проекта
-        base_dir / "src" / filename,    # если положили в src/
+        Path(filename),
+        Path("../") / filename,
+        base_dir / filename,
+        base_dir / "src" / filename,
     ]
     for p in candidates:
         if p.exists():
@@ -34,7 +34,6 @@ async def main():
         print("❌ Не найден шаблон test.docx (С1–Т3)")
         return
 
-    # Простая проверка чтения файлов
     try:
         _ = os.path.getsize(main_docx)
         _ = os.path.getsize(st_docx)
