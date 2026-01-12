@@ -370,6 +370,8 @@ def _build_plan(blanks_count: dict):
     plan += [("main", 2)] * _get_count(blanks_count, "В", "V")
     plan += [("main", 3)] * _get_count(blanks_count, "ПП", "PP")
     plan += [("main", 4)] * _get_count(blanks_count, "СИЗ", "SIZ", "ОТ", "OT")
+    plan += [("main", 5)] * _get_count(blanks_count, "П1", "P1")
+    plan += [("main", 6)] * _get_count(blanks_count, "П2", "P1")
 
     plan += [("st", 0)] * _get_count(blanks_count, "З1", "З1")
     plan += [("st", 1)] * _get_count(blanks_count, "З2", "З2")
